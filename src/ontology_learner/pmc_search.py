@@ -54,14 +54,6 @@ class PubMedCentralSearch:
 
 
 
-    def extract_pdf_url(self, xml_data):
-        # This is a placeholder implementation. You need to parse the XML data to extract the PDF URL.
-        # You can use libraries like xml.etree.ElementTree or lxml to parse the XML.
-        # For simplicity, let's assume the PDF URL is directly available in the XML data.
-        # Replace this with actual XML parsing logic.
-        return "http://example.com/sample.pdf"
-
-
 if __name__ == "__main__":
     email = "poldrack@stanford.edu"
     pmc_search = PubMedCentralSearch(email)
