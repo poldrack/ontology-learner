@@ -13,7 +13,7 @@ class PubMedCentralSearch:
         params = {
             "db": "pmc",
             "term": query,
-            "retmax": 100,
+            "retmax": 200000,
             "retmode": "json",
             "email": self.email
         }
@@ -25,18 +25,30 @@ class PubMedCentralSearch:
         return result
 
 
-    def download_json(self, ids, download_dir):
+    def download_json(self, ids, download_dir, ntries=4):
         for pmcid in ids:
+            json_path = os.path.join(download_dir, f"{pmcid}.json")
+            if os.path.exists(json_path):
+                continue
             print(f'Downloading {pmcid}')
             fetch_url = f"https://www.ncbi.nlm.nih.gov/research/bionlp/RESTful/pmcoa.cgi/BioC_json/PMC{pmcid}/unicode" 
-            response = requests.get(fetch_url)
+            try_num = 0
+            while try_num < ntries:
+                try:
+                    response = requests.get(fetch_url)
+                    break
+                except Exception as e:
+                    print(e)
+                    try_num += 1
+            if try_num >= ntries:
+                print(f"failed to retrieve {pmcid}")
+                continue
             response.raise_for_status()
             try:
                 json_data = response.json()
-            except json.decoder.JSONDecodeError:
-                print(f"Error decoding JSON for PMCID {pmcid}")
+            except json.decoder.JSONDecodeError as e:
+                print(response.text)
                 continue
-            json_path = os.path.join(download_dir, f"{pmcid}.json")
             with open(json_path, "w") as json_file:
                 json_file.write(json.dumps(json_data[0]))
 
@@ -79,7 +91,7 @@ class PubMedCentralSearch:
 if __name__ == "__main__":
     email = "poldrack@stanford.edu"
     pmc_search = PubMedCentralSearch(email)
-    query = "poldrack-r[AU] AND bissett-p[AU]"
+    query = 'brain AND open access[filter] AND "fMRI" OR "functional MRI" OR "functional magnetic resonance imaging"'
     ids = pmc_search.search(query)
     download_dir = "../../data/json"
     if not os.path.exists(download_dir):
