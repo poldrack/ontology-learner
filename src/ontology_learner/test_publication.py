@@ -1,16 +1,15 @@
 import pytest
 from .publication import Publication
 
-def test_load_full_text_from_pdf():
+def test_smoke():
     # Create a Publication instance
-    publication = Publication("Sample Title", ["Author1", "Author2"], "Sample Journal", 2023)
-    
-    # Load the full text from the PDF file
-    pdf_path = "data/pdf/zns1643.pdf"
-    publication.load_full_text_from_pdf(pdf_path)
+    pub = Publication('11557247', datadir='data/json')
+    pub.load_json()
+    pub.parse_sections()
+    pub.combine_text()
     
     # Check if the full_text attribute is not empty
-    assert publication.full_text != ""
+    assert pub.fulltext != ""
     
 
 if __name__ == "__main__":
