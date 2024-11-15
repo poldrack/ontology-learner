@@ -52,33 +52,7 @@ class PubMedCentralSearch:
             with open(json_path, "w") as json_file:
                 json_file.write(json.dumps(json_data[0]))
 
-    def download_pdfs(self, ids, download_dir):
-        fetch_url = f"{self.base_url}efetch.fcgi"
-        if not os.path.exists(download_dir):
-            os.makedirs(download_dir)
-        
-        for pmcid in ids:
-            params = {
-                "db": "pmc",
-                "id": pmcid,
-                "retmode": "xml",
-                "email": self.email
-            }
-            response = requests.get(fetch_url, params=params)
-            response.raise_for_status()
-            xml_data = response.text
 
-            # Extract PDF URL from the XML data
-            pdf_url = self.extract_pdf_url(xml_data)
-            if pdf_url:
-                pdf_response = requests.get(pdf_url)
-                pdf_response.raise_for_status()
-                pdf_path = os.path.join(download_dir, f"{pmcid}.pdf")
-                with open(pdf_path, "wb") as pdf_file:
-                    pdf_file.write(pdf_response.content)
-                print(f"Downloaded {pdf_path}")
-            else:
-                print(f"No PDF found for PMCID {pmcid}")
 
     def extract_pdf_url(self, xml_data):
         # This is a placeholder implementation. You need to parse the XML data to extract the PDF URL.
