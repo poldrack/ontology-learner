@@ -5,6 +5,9 @@ The steps will be:
 - search pubmed central using the specified search terms
 - use JSON or papers matching the search term
     - obtained from full BioC-PMC download - https://ftp.ncbi.nlm.nih.gov/pub/wilbur/BioC-PMC/README.txt
+    - seached on 11/16/2024, found 167447 results for query: brain AND open access[filter] AND "fMRI" OR "functional MRI" OR "functional magnetic resonance imaging"
+    - copied 132257 files
+    - missing 35190 files
 - load each PDF and identify relevant features from the text: 
     - psychological constructs
     - psychological tasks
