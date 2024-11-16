@@ -9,7 +9,7 @@ class Publication:
         self.pmcid = pmcid
         self.data = None
         self.fulltext = None
-        self.sections = defaultdict(list)
+        self.sections = {}
         if datadir is None:
             datadir = Path('../../data/json')
         self.datadir = datadir
@@ -27,20 +27,24 @@ class Publication:
     def parse_sections(self):
         if self.data is None:
             self.load_json()
-        sections = defaultdict(list)
+        sections = {}
         for passage in self.data['documents'][0]['passages']:
             section_type = passage['infons']['section_type']
+            if section_type not in sections:
+                sections[section_type] = []
             sections[section_type].append(passage['text'])
         for section, text in sections.items():
             self.sections[section] = ' '.join(text)
     
-    def combine_text(self):
-        combined_sections =  [
-            self.sections[section] 
-            for section in self.sections_to_include 
-            if self.sections[section]
+    def combine_text(self, sections_to_include=None):
+        if sections_to_include is None:
+            sections_to_include = self.sections_to_include
+        combined_sections = [
+            self.sections[section]
+            for section in sections_to_include
+            if section in self.sections and self.sections[section]
         ]
-        self.fulltext = '\n'.join(combined_sections)
+        return '\n'.join(combined_sections)
 
 
 
