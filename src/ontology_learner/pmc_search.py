@@ -1,6 +1,7 @@
 import requests
 import os
 import json
+import shutil
 
 
 class PubMedCentralSearch:
@@ -24,7 +25,27 @@ class PubMedCentralSearch:
         print(f'Found {len(result)} results for query: {query}')
         return result
 
+    # bioc_dir contains complete download of open access portion of pmc
+    # we want to copy all of our target articles into a separate directory
+    # for ease of use
+    # also, the bioc json files were misnamed as ".xml" so we fix that
+    def copy_from_bioc_download(self, ids, bioc_dir, target_dir):
+        missing_pmids = []
+        copied_files = []
+        for pmcid in ids:
+            infile = os.path.join(bioc_dir, f'PMC{pmcid}.xml')
+            outfile = os.path.join(target_dir, f'{pmcid}.json')
+            if not os.path.exists(infile):
+                missing_pmids.append(pmcid)
+                continue
+            if os.path.exists(outfile):
+                continue
+            shutil.copyfile(infile, outfile)
+            copied_files.append(pmcid)
+        print(f"copied {len(copied_files)} files")
+        print(f"missing {len(missing_pmids)} files")
 
+    # deprecated - lots of missing files
     def download_json(self, ids, download_dir, ntries=4):
         for pmcid in ids:
             json_path = os.path.join(download_dir, f"{pmcid}.json")
@@ -59,7 +80,8 @@ if __name__ == "__main__":
     pmc_search = PubMedCentralSearch(email)
     query = 'brain AND open access[filter] AND "fMRI" OR "functional MRI" OR "functional magnetic resonance imaging"'
     ids = pmc_search.search(query)
-    download_dir = "../../data/json"
-    if not os.path.exists(download_dir):
-        os.makedirs(download_dir)
-    pmc_search.download_json(ids, download_dir)
+    target_dir = "../../data/BioC_expanded"
+    if not os.path.exists(target_dir):
+        os.makedirs(target_dir)
+    bioc_dir = "../../data/BioC"
+    pmc_search.copy_from_bioc_download(ids, bioc_dir, target_dir)
