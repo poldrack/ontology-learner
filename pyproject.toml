@@ -18,6 +18,7 @@ dependencies = [
     "langchain-community>=0.3.7",
     "pypdf>=5.1.0",
     "biopython>=1.84",
+    "jupytext>=1.16.4",
 ]
 
 [build-system]
