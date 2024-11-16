@@ -80,8 +80,8 @@ if __name__ == "__main__":
     pmc_search = PubMedCentralSearch(email)
     query = 'brain AND open access[filter] AND "fMRI" OR "functional MRI" OR "functional magnetic resonance imaging"'
     ids = pmc_search.search(query)
-    target_dir = "../../data/BioC_expanded"
+    target_dir = "../../data/json"
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
-    bioc_dir = "../../data/BioC"
+    bioc_dir = "../../data/BioC_expanded"
     pmc_search.copy_from_bioc_download(ids, bioc_dir, target_dir)
