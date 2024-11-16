@@ -32,7 +32,7 @@ for TAR_FILE in "$SOURCE_DIR"/*.tar.gz; do
 
   # Extract the file to the destination directory
   echo "Extracting '$TAR_FILE' to '$DEST_DIR'..."
-  tar -xzvf "$TAR_FILE" -C "$DEST_DIR"
+  tar -xzf "$TAR_FILE" -C "$DEST_DIR"
   
   if [ $? -eq 0 ]; then
     echo "Extraction of '$TAR_FILE' successful."
