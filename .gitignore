@@ -1,2 +1,5 @@
+.vscode
+__pycache__
+uv.lock
 data/BioC
 data/BioC_expanded
