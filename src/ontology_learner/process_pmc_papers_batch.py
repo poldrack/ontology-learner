@@ -22,7 +22,6 @@ import os
 from pathlib import Path
 from llm_query.chat_client import ChatClientFactory
 from publication import Publication
-import time
 
 
 def get_prompt(text):
@@ -73,11 +72,25 @@ def parse_pmcid_json(pmcid, datadir):
     return pub.combine_text()
 
 
+def get_batchfile(batchfile_dir, batchfile_idx):
+    batchfile = batchfile_dir / f'batch_{batchfile_idx}.jsonl'
+    if batchfile.exists():
+        batchfile.unlink()
+    return batchfile
+
+
+
+
 if __name__ == '__main__':
     api_key = os.environ.get("OPENAI")
+    temperature = 0.0
 
-    datadir = Path('/home/poldrack/code/ontology-learner/data/json')
-    outdir_fulltext = Path('/home/poldrack/code/ontology-learner/data/results_fulltext')
+    datadir =  Path('/Users/poldrack/data_unsynced/ontology-learner/data/json')
+    outdir_fulltext =  Path('/Users/poldrack/data_unsynced/ontology-learner/data/results_fulltext')
+    batchfile_dir = Path('/Users/poldrack/data_unsynced/ontology-learner/data/batch_requests')
+
+    if not batchfile_dir.exists():
+        batchfile_dir.mkdir(parents=True)
 
     if not outdir_fulltext.exists():
         outdir_fulltext.mkdir(parents=True)
@@ -96,7 +109,17 @@ if __name__ == '__main__':
 
     client = ChatClientFactory.create_client("openai", api_key, 
                                              system_msg=system_msg,
-                                             model="gpt-4o")
+                                             model="gpt-4o",
+                                             temperature=temperature)
+
+    batch_requests = {}
+
+    batchfile_idx = 0
+    ctr = 0
+    batchfile_length = 2500
+    batchfile = get_batchfile(batchfile_dir, batchfile_idx)
+
+    batchfiles = [batchfile]
 
     for file in datafiles:
         pmcid = file.stem
@@ -105,24 +128,23 @@ if __name__ == '__main__':
         # check for existing file
         if outfile.exists():
             print(f'{pmcid} already processed')
-            continue    
+            continue
+
         try:
-            response = client.chat(get_prompt(text))
+            batch_request = client.create_batch_request(pmcid, get_prompt(text))
         except Exception as e:
             print(f'error processing {pmcid}: {e}')
             continue
+    
+        with open(batchfile, 'a') as f:
+            f.write(json.dumps(batch_request, separators=(',', ':')) + '\n')
 
-        # clean up response
-        response = response.replace('```json', '').replace('```', '')
+        ctr += 1
+        if ctr >= batchfile_length:
+            batchfile_idx += 1
+            ctr = 0
+            batchfile = get_batchfile(batchfile_dir, batchfile_idx)
 
-        # save results to file
-        try:
-            with open(outfile, 'w') as f:
-                json.dump(json.loads(response), f, indent=4)
-        except json.JSONDecodeError as e:
-            print(f'error parsing JSON for {pmcid}: {e}')
-            print(response)
-            continue
+            batchfiles.append(batchfile)
 
-
-
+    
