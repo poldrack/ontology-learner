@@ -19,8 +19,16 @@ dependencies = [
     "pypdf>=5.1.0",
     "biopython>=1.84",
     "jupytext>=1.16.4",
+    "ipykernel>=6.29.5",
+    "llm-query",
+    "fasttext>=0.9.3",
+    "umap-learn>=0.5.7",
+    "infomap>=2.8.0",
 ]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.uv.sources]
+llm-query = { path = "/Users/poldrack/Dropbox/code/llm_query" }
