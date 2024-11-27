@@ -3,10 +3,10 @@ This project will use LLMs to learn an ontology from papers downloaded from pubm
 ## Step 1: Download full text for fMRI papers
 
 First tried to download individual papers using BioC API, but it was flaky, so decided
-to download the full open access set, see `src/ontology_learner/get_all_bioc.sh`
+to download the full open access set, see `src/ontology_learner/lit_mining/get_all_bioc.sh`
 
 
-Using `src/ontology_learner/pmc_search.py` we then perform our query of PMC and
+Using `src/ontology_learner/lit_mining/pmc_search.py` we then perform our query of PMC and
 copy the matching files from the full set to <datadir>/data/json.  
 
 - searched on 11/16/2024, found 167447 results for query: brain AND open access[filter] AND "fMRI" OR "functional MRI" OR "functional magnetic resonance imaging"
@@ -15,7 +15,7 @@ copy the matching files from the full set to <datadir>/data/json.
 
 ## Step 2: Process papers
 
-Using `src/ontology_learner/process_pmc_papers_batch.py` and `src/ontology_learner/run_gpt4_batch.py`, run the full text of each paper through GPT-4o to annotate various aspects of the paper. Here is the prompt:
+Using `src/ontology_learner/lit_mining/process_pmc_papers_batch.py` and `src/ontology_learner/run_gpt4_batch.py`, run the full text of each paper through GPT-4o to annotate various aspects of the paper. Here is the prompt:
 
 ```
 # CONTEXT #
@@ -57,11 +57,11 @@ Respond only with JSON, without any additional text or description.
 
 ```
 
-This is performed using the OpenAI Batch API to save time and money.  Once the batch job has been completed, used `src/ontology_learner/download_batch_results.py` to download the results and separate them into separate files for each paper, saved to <datadir>/data/results_fulltext.
+This is performed using the OpenAI Batch API to save time and money.  Once the batch job has been completed, used `src/ontology_learner/lit_mining/download_batch_results.py` to download the results and separate them into separate files for each paper, saved to <datadir>/data/results_fulltext.
 
 ## Step 3: Task annotation
 
-Using all of the tasks identified in Step 2, we ask GPT-4o for additional information; see `src/ontology_learner/task_annotation_batch.py`.  Here is the prompt:
+Using all of the tasks identified in Step 2, we ask GPT-4o for additional information; see `src/ontology_learner/annotation/task_annotation_batch.py`.  Here is the prompt:
 
 ```
 # CONTEXT #
@@ -114,14 +114,13 @@ Respond only with JSON, without any additional text or description.
 
 results are stored into <datadir>/data/task_results
 
-### Earlier plans
-The steps will be:
+## Step 4: Task refinement
 
-- search pubmed central using the specified search terms
-- use JSON or papers matching the search term
-- load each PDF and identify relevant features from the text: 
-    - psychological constructs
-    - psychological tasks
-    - brain regions
-    - tables with activation data
+The tasks returned by the annotation had many instances of the same task with slightly different labels. We used a combination of clustering and GPT-4 to identify sets of labels that mapped to the same underlying term.
 
+This was performed using `src/ontology_learner/refinement/task_refinement.ipynb`
+
+
+## Step 5: Concept refinement
+
+A similar refinment was performed for concepts, using `src/ontology_learner/refinement/concept_refinement.ipynb`
