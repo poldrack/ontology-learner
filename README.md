@@ -1,5 +1,38 @@
 This project will use LLMs to learn an ontology from papers downloaded from pubmed central.
 
+# Second pass refactor
+
+I learned a couple of things from the first pass.  
+
+- Many of the results from the LLM turn out to be very similar (e.g. "psychopathy" vs "psychopathic behavior", "stop-signal task" vs "stop-signal task (SST)").  In the first pass I did the harmonization late in the process, which led to unnecessary compute in earlier steps, so in the second pass I will move the harmonization to the second step after paper mining.
+- I realized that I need unique identifiers for each concept/task earlier in the process, to make linking them more effective.  In the second pass I will assign each task/concept a semantically inert unique identifier (random hash) to make it easier to track them.
+- I am going to add another 5000 papers to the literature base. (we have a much larger base, but the cost is about $34.50 per batch of 2500 so that would be expensive)
+
+
+## Step 1: 
+
+## Step 1: Download full text for fMRI papers
+
+First tried to download individual papers using BioC API, but it was flaky, so decided
+to download the full open access set, see `src/ontology_learner/lit_mining/get_all_bioc.sh`
+
+Using `src/ontology_learner/lit_mining/pmc_search.py` we perform our query of PMC and
+copy the matching files from the full set to <datadir>/data/json.  
+
+- searched on 11/16/2024, found 167447 results for query: brain AND open access[filter] AND "fMRI" OR "functional MRI" OR "functional magnetic resonance imaging"
+- copied 132257 files
+- missing 35190 files
+
+## Step 2: Process papers
+
+Using `src/ontology_learner/lit_mining/process_pmc_papers_batch.py` and `src/ontology_learner/run_gpt4_batch.py`, run the full text of each paper through GPT-4o to annotate various aspects of the paper
+
+This is performed using the OpenAI Batch API to save time and money.  Once the batch job has been completed, used `src/ontology_learner/lit_mining/download_batch_results.py` to download the results and separate them into separate files for each paper, saved to <datadir>/data/results_fulltext.  A record of each run is stored in batch_tracking.json within the batch file input directory.
+
+
+
+# Original pass
+
 ## Step 1: Download full text for fMRI papers
 
 First tried to download individual papers using BioC API, but it was flaky, so decided
@@ -124,3 +157,7 @@ This was performed using `src/ontology_learner/refinement/task_refinement.ipynb`
 ## Step 5: Concept refinement
 
 A similar refinment was performed for concepts, using `src/ontology_learner/refinement/concept_refinement.ipynb`
+
+
+## Step 6: Combination of refined tasks and concepts
+
