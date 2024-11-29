@@ -3,7 +3,7 @@ name = "ontology-learner"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 dependencies = [
     "ipython>=8.29.0",
     "jupyter>=1.1.1",
@@ -24,6 +24,8 @@ dependencies = [
     "fasttext>=0.9.3",
     "umap-learn>=0.5.7",
     "infomap>=2.8.0",
+    "torch>=2.5.1",
+    "llm2vec>=0.2.2",
 ]
 
 [build-system]
