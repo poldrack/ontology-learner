@@ -15,7 +15,7 @@ class Publication:
         self.datadir = datadir
         self.sections_to_include = [
             'TITLE', 'ABSTRACT', 'INTRO', 'METHODS', 'RESULTS', 
-            'DISCUSS', 'CONCL', 'FIG', 'TABLE']
+            'DISCUSS'] #, 'CONCL', 'FIG', 'TABLE']
         if additional_sections is not None:
             self.sections_to_include.extend(additional_sections)
 
