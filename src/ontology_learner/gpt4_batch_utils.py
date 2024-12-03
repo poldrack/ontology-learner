@@ -28,6 +28,7 @@ def get_batch_results(client, batch_id):
 
 
 def save_batch_results(batch_results, batch_id, outdir):
+    outdir.mkdir(exist_ok=True, parents=True)
     outfile = outdir / f'{batch_id}.jsonl'
     with open(outfile, 'w') as f:
         f.write(batch_results)
