@@ -16,7 +16,8 @@ def parse_jsonl_file(jsonl_path, parser=None):
 def parse_jsonl_results(results_raw):
     results_content = {}
     for result in results_raw:
-        task = result["custom_id"].split("-")[1]
+        #task = result["custom_id"].split("-")[1]
+        task = result["custom_id"]
         content = result["response"]["body"]["choices"][0]["message"]["content"]
         content = content.replace("json", "").replace("```", "").replace("\n", "")
         try:
