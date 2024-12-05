@@ -16,7 +16,7 @@ def list_completed_batches(client):
 def cancel_all_running_batches(client):
     batches = client.batches.list()
     for batch in batches:
-        if batch.status == 'running':
+        if batch.status == 'in_progress':
             print(f'cancelling batch {batch.id}')
             client.batches.cancel(batch.id)
 
