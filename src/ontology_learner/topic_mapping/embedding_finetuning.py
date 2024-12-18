@@ -146,26 +146,6 @@ for k, v in dataset_orig.items():
 
 
 
- # %%
-
-
-
-
-# %%
-# fit the model
-fit_model = True
-encoder_model_name = 'all-mpnet-base-v2'
-decoder_model_name = 'bert-base-uncased'
-model = SentenceTransformer(encoder_model_name, device=device)
-train_dataloader = DataLoader(train_examples, batch_size=64, shuffle=True, drop_last=True)
-# train_loss = losses.TripletLoss(model)
-train_loss = losses.MultipleNegativesRankingLoss(model)
-if fit_model:
-    model.fit(
-        train_objectives=[(train_dataloader, train_loss)],
-        epochs=10,
-    )
-
 # %%
 # fit the model
 fit_model = True
@@ -180,9 +160,13 @@ from sentence_transformers.trainer import SentenceTransformerTrainer
 from sentence_transformers.training_args import BatchSamplers
 from datasets import Dataset
 
+# TODO: set epoochs and batch size
 args = SentenceTransformerTrainingArguments(
     output_dir="checkpoints",
     batch_sampler=BatchSamplers.NO_DUPLICATES,
+    num_train_epochs=10,
+    per_device_train_batch_size=64,
+    per_device_eval_batch_size=64,
 )
 trainer = SentenceTransformerTrainer(
     model=model,
