@@ -20,7 +20,8 @@ class PaperResults:
         self.paper_results = {}
         self.task_to_pmcid = defaultdict(list)
         self.construct_to_pmcid = defaultdict(list)
-
+        self.paper_results_serialized = {}
+        
     # get results files
     def get_results_files(self):
         self.results_files = list(self.results_dir.glob('*.json'))

@@ -28,6 +28,10 @@ import chromadb
 from chromadb.config import Settings
 from tqdm import tqdm
 from chromadb.utils import embedding_functions
+from sentence_transformers.training_args import SentenceTransformerTrainingArguments
+from sentence_transformers.trainer import SentenceTransformerTrainer
+from sentence_transformers.training_args import BatchSamplers
+from datasets import Dataset
 
 load_dotenv()
 
@@ -102,14 +106,6 @@ else:
     print(f'Loading collection from {dbdir}')
     collection = client.get_collection("fmripapers")
 
-# %%
-
-results = collection.query(
-    query_texts=[dataset_flat['9999677']],
-    n_results=2,
-    # where={"metadata_field": "is_equal_to_this"}, # optional filter
-    # where_document={"$contains":"search_string"}  # optional filter
-)
 
 # %%
 
@@ -121,11 +117,13 @@ test_examples = []
 ctr = 0
 train_cutoff = 250
 
+# some pilot tests showed that predicting results from intro was hardest
+query_section = 'INTRO'
+target_section = 'RESULTS'
 for k, v in dataset_orig.items():
-    query = v['DISCUSS'].replace('Discussion ', '').lower()
-    target_section = 'INTRO'
+    query = v[query_section].lower()
     pos = v[target_section].lower()
-    
+        
     # Select a close example from the database
     results = collection.query(
         query_texts=[dataset_flat[k]],
@@ -136,10 +134,10 @@ for k, v in dataset_orig.items():
 
     if ctr < train_cutoff:
         #train_examples.append(InputExample(texts=[query,pos,neg]))
-        train_examples.append({'query': query, 'pos': pos, 'neg': neg})
+        train_examples.append({'anchor': query, 'positive': pos, 'negative': neg})
     else:
         #test_examples.append(InputExample(texts=[query,pos,neg]))
-        test_examples.append({'query': query, 'pos': pos, 'neg': neg})
+        test_examples.append({'anchor': query, 'positive': pos, 'negative': neg})
     ctr += 1
     if ctr > (train_cutoff * 2):
         break
@@ -150,23 +148,20 @@ for k, v in dataset_orig.items():
 # fit the model
 fit_model = True
 encoder_model_name = 'all-mpnet-base-v2'
-decoder_model_name = 'bert-base-uncased'
+n_train_epochs = 1
+batch_size = 64
+
 model = SentenceTransformer(encoder_model_name, device=device)
 #train_dataloader = DataLoader(train_examples, batch_size=64, shuffle=True, drop_last=True)
 # train_loss = losses.TripletLoss(model)
 train_loss = losses.MultipleNegativesRankingLoss(model)
-from sentence_transformers.training_args import SentenceTransformerTrainingArguments
-from sentence_transformers.trainer import SentenceTransformerTrainer
-from sentence_transformers.training_args import BatchSamplers
-from datasets import Dataset
 
-# TODO: set epoochs and batch size
 args = SentenceTransformerTrainingArguments(
-    output_dir="checkpoints",
+    output_dir="/Users/poldrack/data_unsynced/ontology_learner/checkpoints",
     batch_sampler=BatchSamplers.NO_DUPLICATES,
-    num_train_epochs=10,
-    per_device_train_batch_size=64,
-    per_device_eval_batch_size=64,
+    num_train_epochs=n_train_epochs,
+    per_device_train_batch_size=batch_size,
+    per_device_eval_batch_size=batch_size,
 )
 trainer = SentenceTransformerTrainer(
     model=model,
@@ -184,20 +179,20 @@ trainer.train()
 def get_class_accuracy(model, test_examples):
     test_dists = []
     for example in test_examples:
-        query_embed = model.encode(example['query'])
-        pos_embed = model.encode(example['pos'])
-        neg_embed = model.encode(example['neg'])
-        test_dists.append([np.linalg.norm(query_embed - pos_embed), np.linalg.norm(query_embed - neg_embed)])
+        anchor_embed = model.encode(example['anchor'])
+        positive_embed = model.encode(example['positive'])
+        negative_embed = model.encode(example['negative'])
+        test_dists.append([np.linalg.norm(anchor_embed - positive_embed), np.linalg.norm(anchor_embed - negative_embed)])
 
     dist_array = np.array(test_dists)
     dist_diff = dist_array[:,0] - dist_array[:,1]
     print(f'mean accuracy: {np.mean(dist_diff < 0)}')
 
 model_pretrained = SentenceTransformer(encoder_model_name, device=device)
-print('pretrained model:')
+print(f'pretrained model ({query_section} -> {target_section}):')
 get_class_accuracy(model_pretrained, test_examples)
-print('finetuned model:')
-get_class_accuracy(model, test_examples)
+#print(f'finetuned model ({query_section} -> {target_section}):')
+#get_class_accuracy(model, test_examples)
 
 # %%
 model_output_dir = datadir / 'embedding_models'

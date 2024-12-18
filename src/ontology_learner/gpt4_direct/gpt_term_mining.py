@@ -14,13 +14,26 @@ import hashlib
 import secrets
 
 
-def clean_task_name(taskname):
-    taskname_clean = taskname.lower().replace('tasks', 'task')
+def clean_task_name(taskname, lower=False, title=True):
+    replace_dict = {
+        'Tasks': 'Task',
+        'Tests': 'Test',
+        'Test': 'Test',
+        'Surveys': 'Survey',
+        'Measures': 'Measure',
+        'The ': '',
+        'Questionnaires': 'Questionnaire',
+    }   
+    taskname_clean = taskname.title() if title else taskname
+    for k, v in replace_dict.items():
+        taskname_clean = taskname_clean.replace(k, v)
+    if lower:
+        taskname_clean = taskname_clean.lower()
     if '(' in taskname_clean:
-        acronym = taskname_clean.split('(')[1].strip(')')
+        acronym = [taskname_clean.split('(')[1].split(')')[0]]
         taskname_clean = taskname_clean.split('(')[0].strip()
     else:
-        acronym = []
+        acronym =[]
     return taskname_clean, acronym
 
 def clean_task_ontology(task_ontology):
@@ -178,7 +191,7 @@ def mk_batch_script(batchfile, termlist, prompt_func,
     print(f'wrote {batchfile}')
 
 
-def run_batch_request(batchfile):
+def run_batch_request(batchfile: str, desc: str):
     api_key = os.environ.get("OPENAI")
     batch_client = OpenAI(api_key=api_key)
 
@@ -192,7 +205,7 @@ def run_batch_request(batchfile):
         endpoint="/v1/chat/completions",
         completion_window="24h",
         metadata={
-            "description": "construct annotation"
+            "description": desc
         }
     )
 
@@ -224,8 +237,8 @@ the following dictionary contains lists of psychological task or survey labels t
 being very similar and potentially referring to the same measure.  For example, "stop-signal task" 
 and "stop signal task" refer to the same measure, whereas "color perception task" and 
 "color generation task" refer to different tasks.  For each list, please determine whether the items 
-refer to the same measure or different measures.  Each item includes the task name followed 
-by a brief description of the task.
+refer to the same measure or different measures.  If you are not sure, you should err on the side of
+splitting into separate tasks rather than lumping into the same task.
 
 ### LIST ###
 
@@ -233,9 +246,37 @@ by a brief description of the task.
 
 # RESPONSE #
 Please return the results in JSON format.  The result should be a dictionary.  Each element
-of the dictionary should be a list of task names that belong to the same cluster.  The keys
-should be a string that is a short label that summarizes the tasks in the cluster; if there is only
-one task in the cluster, then use the task name.  Any proper nouns should be capitalized in the key.
+of the dictionary should be a subdictionary, with separate elements for each cluster identified
+within the list of items.  The key for each subdictionary should be a a summary of the labels
+for the items contained in that dictionary; if there is only one task in the cluster, then use 
+the task name.  Any proper nouns should be capitalized in the key.
+
+The subdictionary should have two elements:
+
+- "items" should include a list of task names that belong to the same cluster.  
+- "description": should be a brief description of the cluster
+- 'kind_of": If the elements in this cluster are a more specific kind of another task, then list the 
+name of the more general task.  for example, a "word generation task" is a kind of "generation task". 
+This element should be a list which can contain multiple general kinds; if there are no general 
+kinds for this element, then it should be empty.
+
+Respond only with JSON, without any additional text or description.
+"""
+
+
+def get_task_singleton_prompt(task):
+    return f"""
+We are interested in obtaining further information about a task or survey used by psychologists, known as: 
+"{task}".  We first want to find out whether it is a a more specific kind of another task.  for example, a 
+"word generation task" is a kind of "generation task".  We also want a brief description of the task.
+
+# RESPONSE #
+Please return the results in JSON format.  The result should be a dictionary with three elements:
+
+- "name": the name of the task.  Any proper nouns should be capitalized in the name.
+- "description": should be a brief description of the task
+- 'kind_of": If the task is a more specific kind of another task, then list the 
+name of the more general task.  If there are no general kinds for this task, then it should be empty.
 
 Respond only with JSON, without any additional text or description.
 """

@@ -13,7 +13,7 @@ def parse_jsonl_file(jsonl_path, parser=None):
                 continue
 
 
-def parse_jsonl_results(results_raw):
+def parse_jsonl_results(results_raw, verbose=False):
     results_content = {}
     for result in results_raw:
         #task = result["custom_id"].split("-")[1]
@@ -23,7 +23,8 @@ def parse_jsonl_results(results_raw):
         try:
             results_content[task] = json.loads(content)
         except json.JSONDecodeError:
-            print(f"error decoding {task}")
+            if verbose:
+                print(f"error decoding {task}")
     return results_content
 
 
@@ -57,3 +58,11 @@ def load_jsonl(file_path):
         for line in f:
             data.append(json.loads(line))
     return data
+
+def get_jsonl_file(dir):
+    files = list(dir.glob('*.jsonl'))
+    if len(files) == 0:
+        raise FileNotFoundError(f'No jsonl files found in {dir}')
+    elif len(files) > 1:
+        raise ValueError(f'Expected one jsonl file in {dir}, found {len(files)}')
+    return files[0]

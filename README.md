@@ -13,11 +13,10 @@ I learned a couple of things from the first pass.
 
 ## Step 1: Download full text for fMRI papers
 
-First tried to download individual papers using BioC API, but it was flaky, so decided
-to download the full open access set, see `src/ontology_learner/lit_mining/get_all_bioc.sh`
+1a. Download the entire open access PMC database: [src/ontology_learner/lit_mining/get_all_bioc.sh](src/ontology_learner/lit_mining/get_all_bioc.sh).
 
-Using `src/ontology_learner/lit_mining/pmc_search.py` we perform our query of PMC and
-copy the matching files from the full set to <datadir>/data/json.  
+1b. Using [src/ontology_learner/lit_mining/pmc_search.py]() we perform our query of PMC and
+copy the matching files from the full set to `<datadir>/data/json`.
 
 - searched on 11/16/2024, found 167447 results for query: brain AND open access[filter] AND "fMRI" OR "functional MRI" OR "functional magnetic resonance imaging"
 - copied 132257 files
@@ -25,10 +24,33 @@ copy the matching files from the full set to <datadir>/data/json.
 
 ## Step 2: Process papers
 
-Using `src/ontology_learner/lit_mining/process_pmc_papers_batch.py` and `src/ontology_learner/run_gpt4_batch.py`, run the full text of each paper through GPT-4o to annotate various aspects of the paper
+Using [src/ontology_learner/lit_mining/process_pmc_papers_batch.py]() and [src/ontology_learner/run_gpt4_batch.py](), run the full text of each paper through GPT-4o to annotate various aspects of the paper
 
-This is performed using the OpenAI Batch API to save time and money.  Once the batch job has been completed, used `src/ontology_learner/lit_mining/download_batch_results.py` to download the results and separate them into separate files for each paper, saved to <datadir>/data/results_fulltext.  A record of each run is stored in batch_tracking.json within the batch file input directory.
+This is performed using the OpenAI Batch API to save time and money.  Once the batch job has been completed, used [src/ontology_learner/lit_mining/download_batch_results.py]() to download the results and separate them into separate files for each paper, saved to `<datadir>/data/results_fulltext`.  A record of each run is stored in batch_tracking.json within the batch file input directory.
 
+
+## Step 3: Extract and harmonize task and concept labels
+
+### Aborted Step: cluster using document embeddings
+
+We first tried to compute task and concept similarity using embeddings for the documents. In `src/ontology_learner/lit_mining/get_fulltext_embeddings.ipynb` we compared several possible embeddings, and found that fasttext embeddings generated from the full text corpus were highly correlated in terms of representational similarity with OpenAI embeddings on a subset of documents, so we will use those given that they are both free and reproducible.  These are stored in `<datadir>/fasttext_embeddings_fulltext.npy`.  However, clustering on these embeddings did not produce particularly coherent clusters of concepts, so we abandoned this and used GPT-4 instead (as we had with success in Pass 1).
+
+### Step 3a: Create functions to work with the task and concept sets.
+
+-   `refinement_utils.load_original_results` - loads results from original concept/task extraction
+
+### Step 3c: Clustering of concepts/tasks
+
+Using the mean embeddings, perform agglomerative clustering on the concepts/tasks in order to find similar items for further assessment using GPT-4.
+
+### Step 3d: Refine concepts/tasks
+
+Using the results from 3c, create a refined set of concepts/tasks that combine together the results from the initial annotation (e.g. conditions, contrasts, references, etc).
+
+
+## Step 4: Linkage of tasks and concepts
+
+Using the refined concepts/tasks, find all concept/task pairs that overlap within at least one document.
 
 
 # Original pass

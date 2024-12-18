@@ -19,14 +19,19 @@ You should return a JSON list, with no additional text. If there are
 no coordinates present in the table, return an empty list.
 
 The output should include list of dictionaries for each coordinate in the table, each containing the following keys:
-    - contrast: the name of the relevant contrast that defines what is being compared (e.g. "Incongruent > Congruent")
+    - contrast: what concept or comparison between conditions is being reported (e.g. "Incongruent > Congruent", "Correlation with age")
     - x: the x coordinate (a number between -150 and 150)
     - y: the y coordinate (a number between -150 and 150)
     - z: the z coordinate (a number between -150 and 150)
     - cluster_size: the size of the cluster (a number)
     - label: the label for the anatomical location (e.g. "Left hemisphere")
-    - statistic_type: the type of statistic being reported (e.g. t, Z)
+    - statistic_type: the type of statistic being reported (e.g. t, Z, r)
     - statistic_value: the value of the statistic (a number)
     - coordinate_type: the stereotaxic coordinate system used (usually MNI or Talairach)
     
 """
+
+def get_sorted_coords(a_coord, b_coord):
+    a_coord = a_coord.sort_values(by=['x','y','z'])
+    b_coord = b_coord.sort_values(by=['x','y','z'])
+    return(a_coord, b_coord)

@@ -22,16 +22,15 @@
 import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
-import pickle
-from collections import namedtuple
 import os
 from nltk.stem import WordNetLemmatizer
-import gensim
 from dotenv import load_dotenv
 from pathlib import Path
 from tqdm import tqdm
 from ontology_learner.publication import Publication
 import numpy as np
+import json
+
 
 # Download NLTK data
 nltk.download('punkt')
@@ -74,6 +73,10 @@ def clean_text(sentences, stop_words):
 
     return cleaned_sentences
 
+def list_contains_all_set_elements(lst, s):
+    return set(s).issubset(lst)
+
+
 
 # %%
 
@@ -82,7 +85,7 @@ def clean_text(sentences, stop_words):
 json_files = list(jsondir.glob('*.json'))
 json_files = sorted(json_files)
 
-sections_of_interest = [
+sections_of_interest = set([
     'DISCUSS',
     'RESULTS',
     'ABSTRACT',
@@ -90,7 +93,7 @@ sections_of_interest = [
     'CONCL',
     'METHODS',
     'TITLE',
-]
+])
 
 fulltext = {}
 ctr = 0
@@ -101,51 +104,18 @@ cutoff = np.inf
 for json_file in tqdm(json_files):
     p = Publication(json_file.stem, datadir=jsondir)
     p.parse_sections()
-    text = ''
+    if not list_contains_all_set_elements(p.sections.keys(), sections_of_interest):
+        continue
+    p_json = {}
     for section in sections_of_interest:
         if section in p.sections:
-            text += ' ' + p.sections[section]
-    fulltext[json_file.stem] = clean_text([text], stop_words)[0]
+            p_json[section] = p.sections[section]
+    fulltext[json_file.stem] = p_json
     if ctr > cutoff:
         break
     ctr += 1
 
-with open(datadir / 'fulltext_cleaned.pkl', 'wb') as f:
-    pickle.dump(fulltext, f)
+with open(datadir / 'fulltext_sections.json', 'w') as f:
+    json.dump(fulltext, f)
 
-
-
-# %%
-
-bigram_file = datadir / 'bigram_model.pkl'
-overwrite = True
-min_count = 2
-
-if bigram_file.exists() and not overwrite:
-    bigram = gensim.models.Phrases.load(bigram_file)
-else:
-#  Get abstracts for each year
-    bigram = gensim.models.Phrases(
-        min_count=min_count
-    )   # min_count determined by eyeball
-
-    for pmcid, text in fulltext.items():
-        bigram.add_vocab([text.split(' ')])
-
-frozen_model = bigram.freeze()
-frozen_model.save(bigram_file.as_posix())
-
-
-
-# %%
-
-bg_abstracts = {}
-for pmcid, text in fulltext.items():
-    split_text = text.split(' ')
-    # replace underscores with dashes
-    bg_abstracts[pmcid] = [j.replace('_', '-') 
-                           for j in frozen_model[split_text]]
-
-with open(datadir / 'bigrammed_cleaned_fulltext.pkl', 'wb') as f:
-    pickle.dump(bg_abstracts, f)
 
