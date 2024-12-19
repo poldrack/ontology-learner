@@ -18,18 +18,18 @@
 # %%
 from dotenv import load_dotenv
 from pathlib import Path
-from tqdm import tqdm
 import os
 import pickle
 import json
-import numpy as np
 load_dotenv()
 
 from bertopic import BERTopic
-from bertopic.representation import OpenAI
 from sentence_transformers import SentenceTransformer
-from umap import UMAP
-from hdbscan import HDBSCAN
+#from umap import UMAP
+#from hdbscan import HDBSCAN
+from cuml.cluster import HDBSCAN
+from cuml.manifold import UMAP
+from cuml.preprocessing import normalize
 from sklearn.feature_extraction.text import CountVectorizer
 from bertopic.representation import KeyBERTInspired
 from bertopic.vectorizers import ClassTfidfTransformer
@@ -37,6 +37,7 @@ from bertopic.vectorizers import ClassTfidfTransformer
 datadir = Path(os.getenv('DATADIR'))
 print(datadir)
 
+device = 'cuda'
 
 # %% [markdown]
 # ### Load data
@@ -53,7 +54,7 @@ with open(fulltext_file, 'r') as f:
 # Create training examples
 sentences = []
 sentence_keys = []
-cutoff = 200
+cutoff = 1e10 #200
 minlength = 20
 
 ctr = 0
@@ -96,8 +97,9 @@ def get_embeddings(sentences, datdir, overwrite=False,
 # %%
 
 # Step 1 - Extract embeddings
-embeddings, embedding_model = get_embeddings(sentences, datadir, overwrite=True, device='mps')
-
+model_name = ( datadir / 'embedding_models').as_posix()
+embeddings, embedding_model = get_embeddings(sentences, datadir, model_name=model_name, overwrite=True, device=device)
+embeddings = normalize(embeddings)
 
 # %%
 n_neighbors = 15
@@ -154,8 +156,8 @@ topics, probs = topic_model.fit_transform(sentences)
 
 
 # %%
-topicmodeldir = datadir / 'topic_models'
-topicmodeldir.mkdir(exist_ok=True)
+topicmodeldir = datadir / f'topic_models/bertopic_intro-dicuss_nn-{n_neighbors}_minclust-{min_cluster_size}'
+topicmodeldir.mkdir(exist_ok=True, parents=True)
 topic_model.save(
     topicmodeldir.as_posix(),
     serialization='pytorch',
