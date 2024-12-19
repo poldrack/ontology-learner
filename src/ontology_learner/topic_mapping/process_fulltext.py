@@ -97,7 +97,7 @@ sections_of_interest = set([
 
 fulltext = {}
 ctr = 0
-stop_words = get_stop_words()
+# stop_words = get_stop_words()
 
 ctr = 0
 cutoff = np.inf
