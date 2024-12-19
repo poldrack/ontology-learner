@@ -22,14 +22,18 @@ import os
 import pickle
 import json
 load_dotenv()
-
+import torch
 from bertopic import BERTopic
 from sentence_transformers import SentenceTransformer
-#from umap import UMAP
-#from hdbscan import HDBSCAN
-from cuml.cluster import HDBSCAN
-from cuml.manifold import UMAP
-from cuml.preprocessing import normalize
+if torch.cuda.is_available():
+    from cuml.cluster import HDBSCAN
+    from cuml.manifold import UMAP
+    from cuml.preprocessing import normalize
+else:
+    from umap import UMAP
+    from hdbscan import HDBSCAN
+    from sklearn.preprocessing import normalize
+
 from sklearn.feature_extraction.text import CountVectorizer
 from bertopic.representation import KeyBERTInspired
 from bertopic.vectorizers import ClassTfidfTransformer
@@ -37,7 +41,13 @@ from bertopic.vectorizers import ClassTfidfTransformer
 datadir = Path(os.getenv('DATADIR'))
 print(datadir)
 
-device = 'cuda'
+if torch.cuda.is_available():
+    device = 'cuda'
+elif torch.backends.mps.is_available():
+    device = 'mps'
+else:
+    device = None
+print(f'using device: {device}')
 
 # %% [markdown]
 # ### Load data
@@ -54,7 +64,7 @@ with open(fulltext_file, 'r') as f:
 # Create training examples
 sentences = []
 sentence_keys = []
-cutoff = 1e10 #200
+cutoff = 200 # 1e10 #200
 minlength = 20
 
 ctr = 0
@@ -87,7 +97,6 @@ def get_embeddings(sentences, datdir, overwrite=False,
         with open(datdir / 'embeddings_for_bertopic.pkl', 'rb') as f:
             embeddings = pickle.load(f)
     else:
-        
         embeddings = embedding_model.encode(sentences, show_progress_bar=False)
         with open(datdir / 'embeddings_for_bertopic.pkl', 'wb') as f:
             pickle.dump(embeddings, f)
@@ -98,8 +107,13 @@ def get_embeddings(sentences, datdir, overwrite=False,
 
 # Step 1 - Extract embeddings
 model_name = ( datadir / 'embedding_models').as_posix()
-embeddings, embedding_model = get_embeddings(sentences, datadir, model_name=model_name, overwrite=True, device=device)
+#model_name = '/Users/poldrack/data_unsynced/ontology_learner/embedding_models'
+embeddings, embedding_model = get_embeddings(sentences, datadir,
+                                             model_name=model_name, 
+                                             overwrite=True, 
+                                             device=device)
 embeddings = normalize(embeddings)
+
 
 # %%
 n_neighbors = 15
