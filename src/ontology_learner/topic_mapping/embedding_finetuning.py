@@ -22,20 +22,18 @@ import os
 import json
 import numpy as np
 from sentence_transformers import SentenceTransformer, losses
-from torch.utils.data import DataLoader
-from sentence_transformers import InputExample
 import chromadb
-from chromadb.config import Settings
 from tqdm import tqdm
 from chromadb.utils import embedding_functions
 from sentence_transformers.training_args import SentenceTransformerTrainingArguments
 from sentence_transformers.trainer import SentenceTransformerTrainer
 from sentence_transformers.training_args import BatchSamplers
 from datasets import Dataset
+import random
 
 load_dotenv()
 
-device = 'mps'
+device = 'cuda'
 datadir = Path(os.getenv('DATADIR'))
 print(datadir)
 
@@ -49,6 +47,7 @@ print(datadir)
 # load jsonl format
 fulltext_file = datadir / 'fulltext_sections.json'
 flat_file = datadir / 'fulltext_sections_flat.json'
+print('loading full text')
 
 if not flat_file.exists():
     with open(fulltext_file, 'r') as f:
@@ -79,33 +78,6 @@ else:
 #  the 'pos' key set to the text from the "TITLE" section, and the 'neg' key set to the 'TITLE' section
 # from a randomly selected other line
 
-# %% setup vector database
-
-
-# setup Chroma in-memory, for easy prototyping. Can add persistence easily!
-dbdir = Path('/Users/poldrack/data_unsynced/ontology_learner/chroma_db')
-dbdir.mkdir(exist_ok=True)
-
-# use mac GPU via 'mps' device
-sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(
-    model_name="all-MiniLM-L6-v2", device=device)
-
-client = chromadb.PersistentClient(path=dbdir.as_posix())
-
-# remove collection if it exists
-if "fmripapers" not in [c.name for c in client.list_collections()]:
-
-    collection = client.create_collection(
-        "fmripapers",
-        embedding_function=sentence_transformer_ef
-    )
-
-    for k, v in tqdm(dataset_flat.items()):
-        collection.add(documents=[v], ids=[k])
-else:
-    print(f'Loading collection from {dbdir}')
-    collection = client.get_collection("fmripapers")
-
 
 # %%
 
@@ -114,50 +86,49 @@ else:
 # Create training examples
 train_examples = []
 test_examples = []
-ctr = 0
-train_cutoff = 250
+train_p = .8
+
+print('creating train/test split')
+
+with open(datadir / 'train_test_split.json', 'r') as f:
+    split_keys = json.load(f)
+
 
 # some pilot tests showed that predicting results from intro was hardest
 query_section = 'INTRO'
 target_section = 'RESULTS'
-for k, v in dataset_orig.items():
+for itemset, keysets in split_keys.items():
+  for keysets in keysets:
+    pos_key, neg_key = keysets
+    v = dataset_orig[pos_key]
     query = v[query_section].lower()
     pos = v[target_section].lower()
         
     # Select a close example from the database
-    results = collection.query(
-        query_texts=[dataset_flat[k]],
-        n_results=2,
-    )
-    neg_key = results['ids'][0][1]
     neg = dataset_orig[neg_key][target_section].lower()
 
-    if ctr < train_cutoff:
-        #train_examples.append(InputExample(texts=[query,pos,neg]))
+    if itemset == 'train':
         train_examples.append({'anchor': query, 'positive': pos, 'negative': neg})
     else:
-        #test_examples.append(InputExample(texts=[query,pos,neg]))
         test_examples.append({'anchor': query, 'positive': pos, 'negative': neg})
-    ctr += 1
-    if ctr > (train_cutoff * 2):
-        break
 
-
+print(f'{len(train_examples)} train examples')
+print(f'{len(test_examples)} test examples')
 
 # %%
 # fit the model
 fit_model = True
 encoder_model_name = 'all-mpnet-base-v2'
-n_train_epochs = 1
-batch_size = 64
-
+n_train_epochs = 100
+batch_size = 32
+print('fitting the model')
 model = SentenceTransformer(encoder_model_name, device=device)
 #train_dataloader = DataLoader(train_examples, batch_size=64, shuffle=True, drop_last=True)
 # train_loss = losses.TripletLoss(model)
 train_loss = losses.MultipleNegativesRankingLoss(model)
 
 args = SentenceTransformerTrainingArguments(
-    output_dir="/Users/poldrack/data_unsynced/ontology_learner/checkpoints",
+    output_dir=(datadir / "checkpoints").as_posix(),
     batch_sampler=BatchSamplers.NO_DUPLICATES,
     num_train_epochs=n_train_epochs,
     per_device_train_batch_size=batch_size,
@@ -191,10 +162,11 @@ def get_class_accuracy(model, test_examples):
 model_pretrained = SentenceTransformer(encoder_model_name, device=device)
 print(f'pretrained model ({query_section} -> {target_section}):')
 get_class_accuracy(model_pretrained, test_examples)
-#print(f'finetuned model ({query_section} -> {target_section}):')
-#get_class_accuracy(model, test_examples)
+print(f'finetuned model ({query_section} -> {target_section}):')
+get_class_accuracy(model, test_examples)
 
 # %%
+print('saving embedding model')
 model_output_dir = datadir / 'embedding_models'
 model_output_dir.mkdir(exist_ok=True)
 model.save(model_output_dir.as_posix())
