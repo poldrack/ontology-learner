@@ -32,7 +32,7 @@ class Publication:
             section_type = passage['infons']['section_type']
             if section_type not in sections:
                 sections[section_type] = []
-            sections[section_type].append(passage['text'])
+            sections[section_type].append(passage['text'] + '\n')
         for section, text in sections.items():
             self.sections[section] = ' '.join(text)
     
