@@ -104,7 +104,6 @@ def main(n_neighbors, min_cluster_size, reduce_topics, cutoff):
     #model_name = '/Users/poldrack/data_unsynced/ontology_learner/embedding_models'
     embeddings, embedding_model = get_embeddings(sentences, datadir,
                                                  model_name=model_name, 
-                                                 overwrite=True, 
                                                  device=device)
     embeddings = normalize(embeddings)
 
