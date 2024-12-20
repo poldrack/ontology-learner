@@ -64,7 +64,7 @@ with open(fulltext_file, 'r') as f:
 # Create training examples
 sentences = []
 sentence_keys = []
-cutoff = 200 # 1e10 #200
+cutoff = 1e10 #200
 minlength = 20
 
 ctr = 0
