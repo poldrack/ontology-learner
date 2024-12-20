@@ -37,17 +37,18 @@ from bertopic.vectorizers import ClassTfidfTransformer
 
 import argparse
 
-def get_embeddings(sentences, datdir, overwrite=False,
+def get_embeddings(sentences, datadir, overwrite=False,
                     model_name='all-mpnet-base-v2', # 'all-MiniLM-L6-v2',
                     device=None):
+    embedding_file = datadir / 'embeddings_for_bertopic.pkl'
     embedding_model = SentenceTransformer(model_name, device=None)
-    if os.path.exists('data/embeddings.pkl') and not overwrite:
+    if os.path.exists(embedding_file) and not overwrite:
         print('using existing embeddings from data/embeddings.pkl')
-        with open(datdir / 'embeddings_for_bertopic.pkl', 'rb') as f:
+        with open(embedding_file, 'rb') as f:
             embeddings = pickle.load(f)
     else:
         embeddings = embedding_model.encode(sentences, show_progress_bar=False)
-        with open(datdir / 'embeddings_for_bertopic.pkl', 'wb') as f:
+        with open(embedding_file, 'wb') as f:
             pickle.dump(embeddings, f)
     return embeddings, embedding_model
 
@@ -96,6 +97,7 @@ def main(n_neighbors, min_cluster_size, reduce_topics, cutoff):
 
     # Step 1 - Extract embeddings
     model_name = ( datadir / 'embedding_models').as_posix()
+    embedding_file = datadir / 'embeddings_for_bertopic.pkl'
     #model_name = '/Users/poldrack/data_unsynced/ontology_learner/embedding_models'
     embeddings, embedding_model = get_embeddings(sentences, datadir,
                                                  model_name=model_name, 
