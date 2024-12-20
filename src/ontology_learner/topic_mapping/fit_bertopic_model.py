@@ -37,19 +37,26 @@ from bertopic.vectorizers import ClassTfidfTransformer
 
 import argparse
 
+
+def get_embedding_model(model_name='all-mpnet-base-v2', 
+                        device=None):
+    return SentenceTransformer(model_name, device=None)
+
+
 def get_embeddings(sentences, datadir, overwrite=False,
-                    model_name='all-mpnet-base-v2', # 'all-MiniLM-L6-v2',
+                    model_name='all-mpnet-base-v2', 
                     device=None):
     embedding_file = datadir / 'embeddings_for_bertopic.pkl'
     embedding_model = SentenceTransformer(model_name, device=None)
     try:
         assert os.path.exists(embedding_file), f'{embedding_file} does not exist'
         assert not overwrite, f'{embedding_file} already exists but overwrite is True'
-        print('using existing embeddings from data/embeddings.pkl')
+        print(f'using existing embeddings from {embedding_file.as_posix()}')
         with open(embedding_file, 'rb') as f:
             embeddings = pickle.load(f)
         assert embeddings.shape[0] == len(sentences), f'{embeddings.shape[0]} != {len(sentences)}'
     except:
+        print('computing embeddings')
         embeddings = embedding_model.encode(sentences, show_progress_bar=False)
         with open(embedding_file, 'wb') as f:
             pickle.dump(embeddings, f)
@@ -88,7 +95,7 @@ def main(n_neighbors, min_cluster_size, reduce_topics, cutoff):
             sentences.extend(text)
             sentence_keys.extend([k] * len(text))
         ctr += 1
-        if ctr > cutoff:
+        if cutoff is not None and ctr > cutoff:
             break
 
     print(f'found {len(sentences)} sentences')
@@ -100,13 +107,10 @@ def main(n_neighbors, min_cluster_size, reduce_topics, cutoff):
 
     # Step 1 - Extract embeddings
     model_name = ( datadir / 'embedding_models').as_posix()
-    embedding_file = datadir / 'embeddings_for_bertopic.pkl'
-    #model_name = '/Users/poldrack/data_unsynced/ontology_learner/embedding_models'
     embeddings, embedding_model = get_embeddings(sentences, datadir,
                                                  model_name=model_name, 
                                                  device=device)
     embeddings = normalize(embeddings)
-
     # Step 2 - Reduce dimensionality
     # ala https://maartengr.github.io/BERTopic/faq.html#i-have-too-many-topics-how-do-i-decrease-them
     umap_model = UMAP(
@@ -152,7 +156,7 @@ def main(n_neighbors, min_cluster_size, reduce_topics, cutoff):
         calculate_probabilities=True
     )
 
-    topics, probs = topic_model.fit_transform(sentences)
+    topics, probs = topic_model.fit_transform(sentences, embeddings)
 
     topicmodeldir = datadir / f'topic_models/bertopic_intro-dicuss_' \
                                 f'nn-{n_neighbors}_minclust-{min_cluster_size}_' \
@@ -174,7 +178,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Fit a BERTopic model.')
     parser.add_argument('--n_neighbors', type=int, default=15, help='Number of neighbors for UMAP.')
     parser.add_argument('--min_cluster_size', type=int, default=50, help='Minimum cluster size for HDBSCAN.')
-    parser.add_argument('--cutoff', type=float, default=1e10, help='Cutoff for the number of entries to process.')
+    parser.add_argument('--cutoff', type=float, default=None, help='Cutoff for the number of entries to process.')
     parser.add_argument('--no_reduce', action='store_false', dest='reduce_topics', help='Flag to not reduce topics automatically.')
 
     args = parser.parse_args()

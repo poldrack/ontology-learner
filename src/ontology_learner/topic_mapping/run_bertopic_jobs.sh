@@ -1,12 +1,12 @@
-sbatch slurm/bertopic_25_50.slurm
-sbatch slurm/bertopic_25_100.slurm
-sbatch slurm/bertopic_25_200.slurm
-sbatch slurm/bertopic_50_50.slurm
-sbatch slurm/bertopic_50_100.slurm
-sbatch slurm/bertopic_50_200.slurm
-sbatch slurm/bertopic_100_50.slurm
-sbatch slurm/bertopic_100_100.slurm
-sbatch slurm/bertopic_100_200.slurm
-sbatch slurm/bertopic_200_50.slurm
-sbatch slurm/bertopic_200_100.slurm
-sbatch slurm/bertopic_200_200.slurm
+#bash bertopic.sh 25 50
+#bash bertopic.sh 25 100
+bash bertopic.sh 25 150
+#bash bertopic.sh 25 200
+#bash bertopic.sh 50 50
+#bash bertopic.sh 50 100
+bash bertopic.sh 50 150
+#bash bertopic.sh 50 200
+bash bertopic.sh 50 250
+bash bertopic.sh 50 300
+bash bertopic.sh 25 250
+bash bertopic.sh 25 300
