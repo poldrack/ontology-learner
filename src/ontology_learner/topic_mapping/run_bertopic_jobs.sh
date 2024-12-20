@@ -1,0 +1,12 @@
+sbatch slurm/bertopic_25_50.slurm
+sbatch slurm/bertopic_25_100.slurm
+sbatch slurm/bertopic_25_200.slurm
+sbatch slurm/bertopic_50_50.slurm
+sbatch slurm/bertopic_50_100.slurm
+sbatch slurm/bertopic_50_200.slurm
+sbatch slurm/bertopic_100_50.slurm
+sbatch slurm/bertopic_100_100.slurm
+sbatch slurm/bertopic_100_200.slurm
+sbatch slurm/bertopic_200_50.slurm
+sbatch slurm/bertopic_200_100.slurm
+sbatch slurm/bertopic_200_200.slurm
