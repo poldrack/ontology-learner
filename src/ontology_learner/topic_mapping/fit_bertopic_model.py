@@ -42,11 +42,14 @@ def get_embeddings(sentences, datadir, overwrite=False,
                     device=None):
     embedding_file = datadir / 'embeddings_for_bertopic.pkl'
     embedding_model = SentenceTransformer(model_name, device=None)
-    if os.path.exists(embedding_file) and not overwrite:
+    try:
+        assert os.path.exists(embedding_file), f'{embedding_file} does not exist'
+        assert not overwrite, f'{embedding_file} already exists but overwrite is True'
         print('using existing embeddings from data/embeddings.pkl')
         with open(embedding_file, 'rb') as f:
             embeddings = pickle.load(f)
-    else:
+        assert embeddings.shape[0] == len(sentences), f'{embeddings.shape[0]} != {len(sentences)}'
+    except:
         embeddings = embedding_model.encode(sentences, show_progress_bar=False)
         with open(embedding_file, 'wb') as f:
             pickle.dump(embeddings, f)
