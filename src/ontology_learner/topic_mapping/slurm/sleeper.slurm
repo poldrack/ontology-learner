@@ -13,4 +13,4 @@ module load cudatoolkit
 module load cudnn/cuda12/9.3.0.75
 
 source /projects/m000047/ontology-learner/.venv/bin/activate
-sleep 6000
+sleep 28000
