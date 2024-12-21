@@ -55,14 +55,15 @@ def main(n_neighbors, min_cluster_size, reduce_topics, cutoff):
     def get_embedding_model(model_name='all-mpnet-base-v2', 
                             device=None):
         return SentenceTransformer(model_name, device=None)
+    print(embedding_model_dir)
 
     embedding_model = get_embedding_model(embedding_model_dir.as_posix(), device)
-
+    print(embedding_model)
 
     topicmodeldir = datadir / f'topic_models/bertopic_intro-dicuss_' \
                                 f'nn-{n_neighbors}_minclust-{min_cluster_size}_' \
                                 f'cutoff-{cutoff}_reduce-{reduce_topics_flag}'
-
+    print(topicmodeldir.as_posix())
     topic_model = BERTopic.load(topicmodeldir.as_posix(), embedding_model=embedding_model)
 
     topic_model.get_topic_info()
@@ -124,12 +125,9 @@ def main(n_neighbors, min_cluster_size, reduce_topics, cutoff):
     topic_model.update_topics(sentences, representation_model=representation_model)
 
 
-    modeldir_llm = topicmodeldir.as_posix() + f'{llmname}' 
-    topics, probs = topic_model.transform(sentences)
+    modeldir_llm = topicmodeldir.as_posix() + f'_{llmname}' 
     output_dir_llm = Path(modeldir_llm)
 
-    np.save(output_dir_llm / 'probs.npy', probs)
-    df = pd.DataFrame({"Document": sentences, "Topic": topics}) # , 'Probs': probs})
     topic_model.save(
         output_dir_llm.as_posix(),
         serialization='pytorch',
@@ -137,8 +135,10 @@ def main(n_neighbors, min_cluster_size, reduce_topics, cutoff):
         save_embedding_model=False,
     )
 
+    topics, probs = topic_model.transform(sentences)
+    df = pd.DataFrame({"Document": sentences, "Topic": topics}) # , 'Probs': probs})
     df.to_csv(output_dir_llm / 'topic_probs.csv')
-
+    np.save(output_dir_llm / 'probs.npy', probs)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Annotate a BERTopic model.')
